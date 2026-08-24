@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Armando's Le Club - Ficha de Cliente</title>
+<style>
+/*
+  CRM Le Club — index.html NÚCLEO (Fase 3-4 del blueprint)
+  Basado en el index.html de Palm Diamante. Mismos colores/tipografía por
+  ahora (fáciles de encontrar abajo en :root) — cámbialos cuando tengas
+  la identidad visual definitiva de Le Club, antes de salir a producción.
+
+  El topbar ya se ve completo, igual que el de Palm (mismos botones: Actualizar
+  base en Drive, Le Club Mobile, Cotizador/Prospectos, Control cobranza,
+  Consultar Excel, Administración, y el badge de sesión). Solo "Actualizar"
+  está realmente conectado por ahora — el resto muestra un aviso ("se activa
+  en una próxima fase") con la función comingSoon() en vez de hacer nada,
+  para que ningún botón se sienta roto.
+
+  Lo que falta CONSTRUIR de verdad (fases siguientes del blueprint):
+    - Login de usuarios y permisos reales (Fase 5) — esto reemplaza el
+      badge de sesión estático y el botón Administración
+    - Convenios / módulos financieros (Fase 6)
+    - WhatsApp y Calendario (Fase 7, Calendario en pausa por instrucción)
+    - Prospectos / Le Club Mobile (Fase 8)
+    - PDF / Excel real (Fase 9)
+*/
+:root {
+  --navy:#1B2A4A; --navy2:#243860; --gold:#C8963E; --gold-lt:#FFF8E7; --gold-bd:#F0C040;
+  --green:#1D7A34; --green-lt:#EAF4EA; --red:#C0392B; --purple:#7D3C98; --purple-lt:#F5EEF8;
+  --amber:#7D6608; --blue:#1A5276; --gray-lt:#F7F7F7; --gray-bd:#E0E0E0; --text:#1A1A1A; --muted:#888;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#EEF2F7;color:var(--text);}
+.topbar{background:var(--navy);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:12px;}
+.topbar .badge{width:36px;height:36px;border-radius:8px;background:var(--gold);color:var(--navy);font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;flex:none;}
+.topbar h1{font-size:18px;font-weight:700;}
+.topbar p{font-size:11px;color:#99b3dd;margin-top:2px;}
+.wrap{max-width:900px;margin:0 auto;padding:16px;}
+.card{background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);margin-bottom:14px;overflow:hidden;}
+.card-head{padding:10px 16px;font-size:11px;font-weight:700;color:#fff;letter-spacing:.5px;text-transform:uppercase;}
+.card-body{padding:14px 16px;}
+
+.update-bar{background:var(--green);color:#fff;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.update-bar p{font-size:12px;opacity:.85;margin:0;}
+.update-bar strong{font-size:13px;}
+.update-bar .bar-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.upload-label{display:inline-flex;align-items:center;gap:8px;background:#fff;color:var(--green);border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;}
+.upload-label:hover{background:#f0fff4;}
+.drive-update-btn{display:inline-flex;align-items:center;gap:8px;background:#1B2A4A;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;}
+.drive-update-btn:hover{background:#243860;}
+.session-pill{margin-left:auto;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.11);border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:6px 8px 6px 12px;color:#fff;}
+.session-person{line-height:1.05;}
+.session-person strong{display:block;font-size:12px;}
+.session-person small{font-size:9px;color:#c7d2e5;}
+.session-logout{border:0;border-radius:999px;background:#fff;color:var(--navy);font-size:10px;font-weight:900;padding:6px 9px;cursor:pointer;}
+
+/* ===== Login y Administración de usuarios (Fase 5) ===== */
+.auth-overlay{position:fixed;inset:0;background:linear-gradient(135deg,#0f1f3d,#173a5e);z-index:20000;display:flex;align-items:center;justify-content:center;padding:20px;}
+.auth-card{width:min(430px,100%);background:#fff;border-radius:18px;padding:28px;box-shadow:0 24px 70px rgba(0,0,0,.38);}
+.auth-card h2{color:var(--navy);font-size:23px;margin-bottom:6px;}
+.auth-card p{color:#667085;font-size:12px;margin-bottom:20px;}
+.auth-field{margin-bottom:12px;}
+.auth-field label{display:block;font-size:10px;font-weight:900;text-transform:uppercase;color:#667085;margin-bottom:5px;}
+.auth-field input{width:100%;height:44px;border:2px solid var(--gold-bd);border-radius:9px;background:var(--gold-lt);padding:10px 12px;font:600 14px inherit;outline:none;}
+.auth-login-btn{width:100%;border:0;border-radius:9px;background:var(--navy);color:#fff;padding:12px;font-weight:900;cursor:pointer;}
+.auth-error{min-height:18px;color:var(--red);font-size:12px;font-weight:700;margin-top:10px;}
+.admin-overlay{position:fixed;inset:0;background:rgba(15,23,42,.72);z-index:19000;display:none;align-items:flex-start;justify-content:center;padding:20px;overflow:auto;}
+.admin-overlay.show{display:flex;}
+.admin-panel{width:min(980px,100%);background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 25px 70px rgba(0,0,0,.35);}
+.admin-head{background:var(--navy);color:#fff;padding:15px 18px;display:flex;justify-content:space-between;align-items:center;}
+.admin-head h2{font-size:17px;}
+.admin-close{border:0;border-radius:8px;background:#53627e;color:#fff;padding:8px 12px;font-weight:900;cursor:pointer;}
+.admin-body{padding:16px;}
+.admin-box{border:1px solid #dbe3ee;border-radius:12px;padding:14px;margin-bottom:14px;}
+.admin-box h3{color:var(--navy);font-size:15px;margin-bottom:4px;}
+.admin-sub{font-size:11px;color:#667085;margin-bottom:12px;}
+.admin-form-grid{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end;}
+.admin-form-grid label{display:block;font-size:9px;font-weight:900;color:#667085;text-transform:uppercase;margin-bottom:4px;}
+.admin-form-grid input{width:100%;height:40px;border:2px solid var(--gold-bd);border-radius:8px;background:var(--gold-lt);padding:8px 10px;font-weight:700;}
+.admin-save{height:40px;border:0;border-radius:8px;background:#0865c7;color:#fff;padding:0 18px;font-weight:900;cursor:pointer;}
+.perm-grid{display:flex;gap:10px;flex-wrap:wrap;border-top:1px solid #e5e7eb;margin-top:12px;padding-top:12px;}
+.perm-chip{display:flex;gap:8px;align-items:center;border:1px solid #dbe3ee;background:#f8fafc;border-radius:9px;padding:9px 11px;font-size:12px;font-weight:800;color:var(--navy);}
+.users-table{width:100%;border-collapse:collapse;font-size:12px;}
+.users-table th{background:#f5f7fa;text-align:left;padding:9px;color:#475467;font-size:9px;text-transform:uppercase;}
+.users-table td{padding:10px 9px;border-bottom:1px solid #edf1f5;vertical-align:middle;}
+.role-badge,.perm-badge{display:inline-block;border-radius:999px;padding:4px 8px;font-size:9px;font-weight:900;margin:2px;}
+.role-badge.admin{background:#fff7e8;color:#a43b12;border:1px solid #fdc77a;}
+.role-badge.user{background:#f2f4f7;color:#475467;}
+.perm-badge.yes{background:#e8f1ff;color:#174b91;}
+.perm-badge.no{background:#f2f4f7;color:#98a2b3;}
+.admin-mini{border:1px solid #b7d1ff;border-radius:8px;background:#eef5ff;color:#0b4ea2;padding:7px 11px;font-weight:900;cursor:pointer;}
+.admin-mini.delete{border:0;background:#fee2e2;color:#a11;}
+.admin-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.admin-new{border:1px solid #b7d1ff;border-radius:8px;background:#eef5ff;color:#0b4ea2;padding:9px 12px;font-weight:900;cursor:pointer;}
+.admin-status{min-height:17px;font-size:11px;font-weight:800;margin-top:8px;}
+.admin-status.error{color:var(--red);}
+.admin-status.ok{color:var(--green);}
+
+.suggestions{position:relative;}
+.search-wrap{display:flex;gap:8px;align-items:center;}
+input[type=text],input[type=date],input[type=number],select,textarea{width:100%;padding:10px 14px;font-size:14px;font-weight:600;border:2px solid var(--gold-bd);border-radius:8px;background:var(--gold-lt);outline:none;color:var(--navy);font-family:inherit;}
+input:focus,select:focus,textarea:focus{border-color:var(--gold);}
+.btn{padding:10px 18px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;font-family:inherit;}
+.btn-clear{background:#E5E7EB;color:#555;}
+.btn-clear:hover{background:#D1D5DB;}
+.sugg-list{position:absolute;top:calc(100% + 6px);left:0;right:0;background:#fff;border:2px solid var(--gold);border-radius:12px;max-height:360px;overflow-y:auto;z-index:1000;box-shadow:0 16px 40px rgba(0,0,0,.2);display:none;}
+.sugg-item{padding:14px 18px;font-size:13px;cursor:pointer;border-bottom:1px solid #F0F0F0;line-height:1.4;}
+.sugg-item:hover{background:var(--gold-lt);font-weight:600;color:var(--navy);}
+.sugg-count{padding:6px 18px;font-size:11px;color:var(--muted);background:#fafafa;}
+
+.depto-row{display:none;margin-top:10px;align-items:center;gap:10px;}
+.depto-row.show{display:flex;}
+.depto-lbl{font-size:12px;font-weight:700;color:var(--navy);white-space:nowrap;}
+.depto-badge{background:var(--purple-lt);color:var(--purple);font-size:11px;font-weight:700;padding:5px 10px;border-radius:20px;white-space:nowrap;}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.f{display:flex;flex-direction:column;gap:3px;}
+.f-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+.f-val{font-size:13px;padding:7px 10px;background:var(--gray-lt);border:1px solid var(--gray-bd);border-radius:6px;min-height:34px;word-break:break-word;}
+.f-val.money{color:var(--navy);font-weight:700;}
+.f-val.red{color:var(--red);font-weight:700;}
+.f-val.green{color:var(--green);font-weight:700;}
+.f-val.dim{color:var(--muted);font-style:italic;}
+
+.sim-row{display:grid;grid-template-columns:1fr 32px 1fr;gap:6px;align-items:end;margin-bottom:8px;}
+.sim-arrow{text-align:center;font-size:14px;color:var(--muted);padding-bottom:8px;}
+.sim-group{display:flex;flex-direction:column;gap:4px;}
+.sim-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+input.sim-inp{text-align:right;}
+.sim-hint{font-size:10px;color:var(--muted);font-style:italic;}
+.divider{height:1px;background:var(--gray-bd);margin:12px 0;}
+.res-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.res-item{background:var(--green-lt);border:1px solid #C8E6C9;border-radius:8px;padding:10px 12px;}
+.res-item.wide{grid-column:1/-1;}
+.res-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;}
+.res-val{font-size:16px;font-weight:700;color:var(--green);}
+.res-val.red{color:var(--red);}
+.res-val.navy{color:var(--navy);}
+
+.toast{position:fixed;top:16px;right:16px;background:var(--green);color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:700;box-shadow:0 4px 20px rgba(0,0,0,.2);z-index:9999;display:none;}
+.toast.error{background:var(--red);}
+.empty-state{text-align:center;padding:40px 20px;color:var(--muted);font-style:italic;font-size:14px;}
+
+.search-by-depto{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap;}
+.search-by-depto .sep{font-size:11px;color:var(--muted);font-weight:700;white-space:nowrap;}
+.depto-search-input{flex:1;min-width:110px;}
+.btn-buscar{padding:9px 18px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;}
+.btn-buscar:hover{background:var(--navy2);}
+.depto-result{margin-top:8px;padding:8px 12px;background:var(--purple-lt);border-radius:8px;font-size:12px;color:var(--purple);font-weight:600;display:none;}
+
+/* Seguimiento comercial */
+.follow-card textarea,.follow-card input,.follow-card select{background:var(--gold-lt);}
+.follow-card textarea{resize:vertical;min-height:70px;}
+.follow-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+.btn-save-follow{background:var(--navy);color:#fff;}
+.btn-save-follow:hover{background:var(--navy2);}
+.follow-status{font-size:12px;color:var(--muted);margin-top:8px;font-weight:600;}
+.summary-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;}
+.summary-box{border:1px solid var(--gray-bd);border-radius:10px;padding:10px;background:#fff;}
+.summary-box .f-lbl{margin-bottom:6px;}
+.summary-main{font-size:14px;font-weight:900;color:var(--navy);}
+
+/* Timeline de historial */
+.hist-list.timeline{position:relative;margin-top:12px;padding-left:24px;display:grid;gap:10px;}
+.hist-list.timeline:before{content:"";position:absolute;left:8px;top:4px;bottom:4px;width:2px;background:var(--gray-bd);}
+.hist-item{background:#fff;border:1px solid var(--gray-bd);border-radius:10px;padding:10px 12px;position:relative;box-shadow:0 1px 5px rgba(0,0,0,.04);}
+.hist-list.timeline .hist-item:before{content:"";position:absolute;left:-22px;top:14px;width:12px;height:12px;border-radius:50%;background:var(--gold);border:3px solid #fff;box-shadow:0 0 0 1px var(--gold-bd);}
+.timeline-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:4px;}
+.timeline-title{font-size:13px;font-weight:800;color:var(--navy);}
+.timeline-date{font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap;}
+.timeline-resp{font-size:11px;color:var(--muted);font-weight:700;margin-bottom:6px;}
+.timeline-note{font-size:12px;line-height:1.45;color:var(--text);}
+.hist-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.hist-mini-btn{border:none;border-radius:6px;padding:5px 8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;}
+.hist-mini-btn.edit{background:var(--gold-lt);color:var(--amber);border:1px solid var(--gold-bd);}
+.hist-mini-btn.delete{background:#FDECEC;color:var(--red);border:1px solid #F5B7B1;}
+
+/* Dashboard */
+.dashboard-card{padding:0;}
+.dash-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+.dash-title{font-size:20px;font-weight:800;color:var(--navy);}
+.dash-sub{font-size:12px;color:#445;margin-top:4px;}
+.dash-date{font-size:12px;color:var(--muted);font-weight:700;background:#F8FAFC;border:1px solid #E5E7EB;border-radius:999px;padding:7px 12px;}
+.dash-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0 16px;}
+.dash-tile{border:1px solid #E5E7EB;border-radius:12px;background:#fff;padding:14px;cursor:pointer;transition:.15s;min-height:110px;}
+.dash-tile:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,0,0,.08);}
+.dash-tile.active{box-shadow:0 0 0 2px var(--navy) inset;}
+.dash-icon{font-size:22px;margin-bottom:8px;}
+.dash-label{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;}
+.dash-num{font-size:28px;font-weight:900;line-height:1;}
+.dash-caption{font-size:11px;color:#4B5563;margin-top:8px;line-height:1.35;}
+.dash-red{border-color:#F4B4AC;background:#FFF7F7;color:#C0392B;}
+.dash-orange{border-color:#FDBA74;background:#FFF7ED;color:#EA580C;}
+.dash-yellow{border-color:#FDE68A;background:#FFFBEB;color:#D97706;}
+.dash-blue{border-color:#BFDBFE;background:#EFF6FF;color:#2563EB;}
+.dash-teal{border-color:#99F6E4;background:#F0FDFA;color:#0D9488;}
+.dash-green{border-color:#BBF7D0;background:#F0FDF4;color:#15803D;}
+.dash-gray{border-color:#D1D5DB;background:#F9FAFB;color:#4B5563;}
+.dash-table-card{border:1px solid #E5E7EB;border-radius:12px;background:#fff;overflow:hidden;}
+.dash-table-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-bottom:1px solid #E5E7EB;flex-wrap:wrap;}
+.dash-table-title{font-size:13px;font-weight:900;color:var(--navy);text-transform:uppercase;letter-spacing:.3px;}
+.dash-table{width:100%;border-collapse:collapse;font-size:12px;}
+.dash-table th{background:var(--navy);color:#fff;text-align:left;font-size:11px;padding:9px 10px;}
+.dash-table td{padding:9px 10px;border-bottom:1px solid #EEF2F7;vertical-align:middle;}
+.dash-table tr:hover{background:#F8FAFC;}
+.status-pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:800;background:#F3F4F6;color:#374151;}
+.status-pill.red{background:#FEE2E2;color:#B91C1C;}
+.status-pill.orange{background:#FFEDD5;color:#C2410C;}
+.status-pill.yellow{background:#FEF3C7;color:#92400E;}
+.status-pill.blue{background:#DBEAFE;color:#1D4ED8;}
+.status-pill.green{background:#DCFCE7;color:#166534;}
+.status-pill.gray{background:#F3F4F6;color:#374151;}
+.status-pill.teal{background:#CCFBF1;color:#0F766E;}
+.btn-mini-open{background:var(--navy);color:#fff;border:none;border-radius:7px;padding:7px 10px;font-size:11px;font-weight:800;cursor:pointer;}
+.btn-mini-open:hover{background:var(--navy2);}
+.btn-mini-clear{background:#E5E7EB;color:#374151;border:none;border-radius:7px;padding:7px 10px;font-size:11px;font-weight:800;cursor:pointer;margin-left:6px;}
+.btn-mini-clear:hover{background:#D1D5DB;}
+
+@media(max-width:900px){.dash-grid{grid-template-columns:repeat(2,1fr)}.summary-strip{grid-template-columns:1fr 1fr}}
+@media(max-width:580px){
+  .grid2,.res-grid,.sim-row{grid-template-columns:1fr;}
+  .sim-arrow{display:none;}
+  .res-item.wide{grid-column:1;}
+  .dash-grid{grid-template-columns:1fr}
+  .summary-strip{grid-template-columns:1fr}
+  .dash-table{font-size:11px}
+  .dash-table th,.dash-table td{padding:7px 6px}
+}
+</style>
+</head>
+<body>
+
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-card">
+    <h2>Armando's Le Club</h2><p>Ingresa con tu usuario y contraseña.</p>
+    <div class="auth-field"><label>Usuario</label><input id="authUsuario" autocomplete="username" placeholder="Usuario"></div>
+    <div class="auth-field"><label>Contraseña</label><input id="authPassword" type="password" autocomplete="current-password" placeholder="Contraseña"></div>
+    <button class="auth-login-btn" onclick="loginLeClubUsuario()">Entrar</button><div class="auth-error" id="authError"></div>
+  </div>
+</div>
+
+<div class="admin-overlay" id="adminOverlay">
+ <div class="admin-panel">
+  <div class="admin-head"><h2>⚙️ Administración · Usuarios</h2><button class="admin-close" onclick="closeAdminUsuarios()">Cerrar</button></div>
+  <div class="admin-body">
+   <div class="admin-box">
+    <h3>Crear / editar usuario</h3><div class="admin-sub">El ID interno se genera automáticamente y nunca cambia. El Administrador Supremo conserva todos los permisos.</div>
+    <input type="hidden" id="admIdInterno">
+    <div class="admin-form-grid">
+      <div><label>Nombre</label><input id="admNombre" placeholder="Nombre" oninput="syncLoginNombre()"></div>
+      <div><label>Usuario</label><input id="admUsuario" placeholder="Usuario"></div>
+      <div><label>Contraseña</label><input id="admPassword" type="password" placeholder="Contraseña"></div>
+      <button class="admin-save" onclick="saveAdminUsuario()">Guardar</button>
+    </div>
+    <div class="perm-grid">
+      <label class="perm-chip"><input type="checkbox" id="permActualizarDrive"> Actualizar Base Drive</label>
+      <label class="perm-chip"><input type="checkbox" id="permConsultarExcel"> Consultar Excel</label>
+      <label class="perm-chip"><input type="checkbox" id="permUsuarios"> Administración de usuarios</label>
+    </div>
+    <div class="admin-status" id="adminStatus"></div>
+   </div>
+   <div class="admin-box"><div class="admin-toolbar"><div><h3>Usuarios activos</h3><div class="admin-sub" id="usersCount">Cargando...</div></div><button class="admin-new" onclick="newAdminUsuario()">+ Nuevo usuario</button></div>
+    <div style="overflow:auto"><table class="users-table"><thead><tr><th>Usuario</th><th>Nombre</th><th>Tipo</th><th>Permisos</th><th>Último acceso</th><th>Acciones</th></tr></thead><tbody id="usersTbody"></tbody></table></div>
+   </div>
+  </div>
+ </div>
+</div>
+
+<div class="topbar">
+  <div class="badge">LC</div>
+  <div>
+    <h1>Armando's Le Club — Propuesta de pago</h1>
+    <p>Cobranza Agosto 2026</p>
+  </div>
+</div>
+
+<div class="update-bar" id="updateBar">
+  <div>
+    <strong id="updateTitle">Conectando con Google Sheets...</strong>
+    <p id="dataSourceLabel">Cargando datos actualizados...</p>
+  </div>
+  <div class="bar-actions">
+    <button class="upload-label" onclick="loadFromScript()">⟳ Actualizar</button>
+    <button class="drive-update-btn" id="btnActualizarDrive" onclick="comingSoon('Actualizar base en Drive')">Actualizar base en Drive</button>
+    <button class="drive-update-btn" style="background:#0b63c7" onclick="comingSoon('Armando\'s Mobile')">📱 Armando's Mobile</button>
+    <button class="drive-update-btn" onclick="comingSoon('Cotizador / Prospectos')">Cotizador / Prospectos</button>
+    <button class="drive-update-btn" onclick="comingSoon('Control de cobranza')">Control cobranza</button>
+    <button class="upload-label" id="btnConsultarExcel" onclick="comingSoon('Consultar Excel')">Consultar Excel</button>
+    <button class="drive-update-btn" id="adminUsersButton" onclick="openAdminUsuarios()">⚙️ Administración</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="wrap">
+
+  <div class="card">
+    <div class="card-head" style="background:var(--navy)">Buscar cliente</div>
+    <div class="card-body">
+      <div class="suggestions">
+        <div class="search-wrap">
+          <input type="text" id="searchInput" placeholder="Escribe o pega el nombre del cliente..." autocomplete="off" spellcheck="false">
+          <button class="btn btn-clear" onclick="clearAll()">Limpiar</button>
+        </div>
+        <div id="suggList" class="sugg-list"></div>
+      </div>
+      <div class="search-by-depto">
+        <span class="sep">o busca por:</span>
+        <input type="text" class="depto-search-input" id="torreInput" placeholder="Torre/edificio (opcional)" maxlength="20">
+        <input type="text" class="depto-search-input" id="deptoInput" placeholder="Num. Depto (ej: 1301)" maxlength="10">
+        <button class="btn-buscar" onclick="searchByDepto()">Buscar</button>
+      </div>
+      <div class="depto-result" id="deptoResult"></div>
+
+      <div class="depto-row" id="deptoRow">
+        <span class="depto-lbl">Torre / Depto:</span>
+        <select id="deptoSel" onchange="onDeptoChange()">
+          <option value="">-- Selecciona un departamento --</option>
+        </select>
+        <span class="depto-badge" id="deptoBadge"></span>
+      </div>
+    </div>
+  </div>
+
+  <div id="content">
+    <div class="card"><div class="card-body"><div class="empty-state">Cargando panel de seguimiento...</div></div></div>
+  </div>
+
+</div>
+
+<script>
+// ============ CONFIGURACIÓN ============
+// TODO: pega aquí la URL /exec que te dio Apps Script al implementar el núcleo.
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzbRt1bTcCv8wnxJiLW3oPEVKDZnxzwX6f_9wVNdoIHgITJpYcDrei9CTZEPZXMRE9M/exec";
+
+const fmtM = n => !n && n!==0 ? '--' : '$'+Number(n).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtP = n => !n && n!==0 ? '--' : (Number(n)*100).toFixed(2)+'%';
+const cleanPctText = n => { if(!n && n!==0) return ''; let s=String(Number(n).toFixed(6)); return s.replace(/0+$/,'').replace(/\.$/,''); };
+const fmtPctMax = v => {
+  if (v === null || v === undefined || v === '') return 'No aplica';
+  let n = Number(String(v).replace(/[$%\s,]/g,''));
+  if (!n || isNaN(n) || n <= 0) return 'No aplica';
+  const pct = n > 0 && n <= 1 ? n * 100 : n;
+  return cleanPctText(pct) + '%';
+};
+
+const $ = id => document.getElementById(id);
+let DB = {};          // se llena en vivo desde el Sheet — ver loadFromScript()
+let curClient = null, curData = null, inp = null;
+let SEG_HISTORY = [];
+let DASHBOARD_FILTER = '';
+let DASHBOARD_ITEMS = [];
+let ESTADOS_SEGUIMIENTO = [];
+let RESPONSABLES_SEGUIMIENTO = [];
+
+function escapeHtml(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+function escapeJs(str) {
+  return String(str == null ? '' : str)
+    .replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n').replace(/\r/g,'');
+}
+function normalizeKey(value) {
+  return String(value == null ? '' : value).toLowerCase().normalize('NFD')
+    .replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'').replace(/[^\w\d]/g,'');
+}
+function comingSoon(nombre) {
+  showToast(nombre + ': se activa en una próxima fase.', false);
+}
+function showToast(msg, isError) {
+  const t = $('toast'); t.textContent = msg;
+  t.className = 'toast' + (isError ? ' error' : '');
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 4000);
+}
+function todayISO() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+// ============ JSONP (bypass CORS hacia Apps Script) ============
+function jsonpAction(params, onSuccess, onError) {
+  const callbackName = 'leclubAction_' + Date.now() + '_' + Math.floor(Math.random()*100000);
+  const script = document.createElement('script');
+  const url = new URL(SCRIPT_URL);
+  Object.keys(params || {}).forEach(k => url.searchParams.set(k, params[k] == null ? '' : String(params[k])));
+  url.searchParams.set('callback', callbackName);
+
+  const timeout = setTimeout(() => { cleanup(); if (onError) onError(new Error('Tiempo de espera agotado')); }, 45000);
+  function cleanup() { clearTimeout(timeout); delete window[callbackName]; if (script.parentNode) script.parentNode.removeChild(script); }
+
+  window[callbackName] = function(resp) {
+    cleanup();
+    if (resp && resp.ok === false) { if (onError) onError(new Error(resp.error || 'Error desconocido')); return; }
+    if (onSuccess) onSuccess(resp);
+  };
+  script.onerror = function() { cleanup(); if (onError) onError(new Error('No se pudo conectar con Apps Script')); };
+  script.src = url.toString();
+  document.head.appendChild(script);
+}
+
+function clientKeyData() {
+  return {
+    cliente: curClient || '',
+    telefono: curData ? (curData.tel || '') : '',
+    torre: curData ? (curData.torre || '') : '',
+    depto: curData ? (curData.depto || '') : ''
+  };
+}
+
+// ============ CARGA DE LA HOJA PRINCIPAL ============
+function loadFromScript() {
+  const title = $('updateTitle');
+  const label = $('dataSourceLabel');
+
+  const callbackName = 'leclubCallback_' + Date.now();
+  const script = document.createElement('script');
+  const timeout = setTimeout(() => {
+    cleanup();
+    if (title) title.textContent = 'Sin conexión con Google Sheets';
+    if (label) label.innerHTML = 'Revisa que SCRIPT_URL esté configurado y que el Web App esté implementado.';
+  }, 15000);
+  function cleanup() { clearTimeout(timeout); delete window[callbackName]; if (script.parentNode) script.parentNode.removeChild(script); }
+
+  window[callbackName] = function(raw) {
+    cleanup();
+    try {
+      const toN = v => { if (v===null||v===undefined||v==='') return 0; const s=String(v).replace(/[$%,\s]/g,'').replace(/[()]/g,''); const n=parseFloat(s); return isNaN(n)?0:n; };
+      const toS = v => (v===null||v===undefined) ? '' : String(v).trim();
+      const norm = v => toS(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
+
+      function findHeaderAndColumns(rows) {
+        let best = null;
+        for (let i = 0; i < Math.min(rows.length, 30); i++) {
+          const row = rows[i] || [];
+          const normalized = row.map(norm);
+          const idxCliente = normalized.findIndex(x => x === 'cliente' || x.includes('cliente'));
+          const idxDepto   = normalized.findIndex(x => x === 'depto' || x.includes('depto') || x.includes('departamento'));
+          const idxTorre   = normalized.findIndex(x => x === 'torre' || x.includes('torre'));
+          if (idxCliente >= 0 && idxDepto >= 0 && idxTorre >= 0) { best = { headerIndex: i, normalized }; break; }
+        }
+        if (!best) {
+          return { headerIndex: 0, c: { torre:0,nivel:1,depto:2,cliente:3,tel:4,estatus:5,vendedor:6,fecha:7,precio:8,precio_m2:9,depositos:10,efectivo:11,dep_ef:12,enganche:13,doc:14,pago_final:15,saldo:16,vencido:17,venc_desde:18,ant:19,nota:20,desc_pct:21,desc_monto:22,acuerdo:23 } };
+        }
+        const h = best.normalized;
+        const find = (...names) => {
+          for (const name of names) {
+            const target = norm(name);
+            let idx = h.findIndex(x => x === target);
+            if (idx >= 0) return idx;
+            idx = h.findIndex(x => x.includes(target));
+            if (idx >= 0) return idx;
+          }
+          return -1;
+        };
+        const c = {
+          torre: find('torre'), nivel: find('nivel'), depto: find('depto','departamento'), cliente: find('cliente'),
+          tel: find('telefono','teléfono','celular'), estatus: find('estatus','status'), vendedor: find('vendedor'),
+          fecha: find('fecha venta'), precio: find('precio venta'), precio_m2: find('precio m2','precio m²'),
+          depositos: find('depositos','depósitos'), efectivo: find('efectivo'), dep_ef: find('dep+efectivo','dep + efectivo'),
+          enganche: find('% enganche','enganche'), doc: find('documentado'), pago_final: find('pago final'),
+          saldo: find('saldo que debe','saldo'), vencido: find('vencido'), venc_desde: find('vencido desde'),
+          ant: find('antiguedad','antigüedad','tiempo vencido'), nota: find('nota','notas'),
+          desc_pct: find('desc. max %','desc max %','descuento maximo %','descuento máximo %'),
+          desc_monto: find('desc. max $','desc max $','descuento maximo $','descuento máximo $'), acuerdo: find('acuerdo')
+        };
+        return { headerIndex: best.headerIndex, c };
+      }
+
+      const parsed = findHeaderAndColumns(raw);
+      const hi = parsed.headerIndex, c = parsed.c;
+      const newClients = {};
+
+      for (let i = hi + 1; i < raw.length; i++) {
+        const r = raw[i];
+        if (!r || !Array.isArray(r)) continue;
+        const name = toS(r[c.cliente]).toUpperCase();
+        const torre = toS(r[c.torre]);
+        const depto = toS(r[c.depto]);
+        if (!name || name.length < 3) continue;
+        if (!torre && !depto) continue;
+        const lowName = name.toLowerCase();
+        if (['cliente','total','subtotal','totales'].some(x => lowName === x)) continue;
+        if (lowName.includes('todas las torres')) continue;
+
+        const e = {
+          torre, nivel: toS(r[c.nivel]), depto, tel: toS(r[c.tel]), estatus: toS(r[c.estatus]),
+          vendedor: toS(r[c.vendedor]), fecha: toS(r[c.fecha]).slice(0,10), precio: toN(r[c.precio]),
+          precio_m2: toN(r[c.precio_m2]), depositos: toN(r[c.depositos]), efectivo: toN(r[c.efectivo]),
+          dep_ef: toN(r[c.dep_ef]), enganche: toN(r[c.enganche]), doc: toN(r[c.doc]), pago_final: toN(r[c.pago_final]),
+          saldo: toN(r[c.saldo]), vencido: toN(r[c.vencido]), venc_desde: toS(r[c.venc_desde]), ant: toS(r[c.ant]),
+          nota: toS(r[c.nota]), desc_pct: toN(r[c.desc_pct]), desc_monto: toN(r[c.desc_monto]), acuerdo: toS(r[c.acuerdo])
+        };
+        if (!newClients[name]) newClients[name] = [];
+        newClients[name].push(e);
+      }
+
+      const count = Object.keys(newClients).length;
+      if (count === 0) throw new Error('Sin clientes');
+
+      Object.keys(DB).forEach(k => delete DB[k]);
+      Object.assign(DB, newClients);
+
+      if (curData && curClient) {
+        const entries = DB[curClient];
+        if (entries) {
+          const sel = $('deptoSel');
+          curData = (sel && sel.value) ? entries[parseInt(sel.value)] : entries[0];
+          renderFicha(curData);
+        }
+      }
+
+      if (title) title.textContent = 'Sincronizado con Google Sheets';
+      if (label) label.innerHTML = count + ' clientes cargados';
+    } catch (err) {
+      console.warn('JSONP parse error:', err.message);
+      if (title) title.textContent = Object.keys(DB).length ? 'Datos cargados' : 'Sin datos';
+      if (label) label.innerHTML = Object.keys(DB).length + ' clientes en memoria — revisa el mensaje en consola si esperabas más';
+    }
+  };
+
+  script.onerror = function() {
+    cleanup();
+    if (title) title.textContent = 'No se pudo conectar';
+    if (label) label.innerHTML = 'Revisa SCRIPT_URL y que el Web App esté implementado con acceso "Cualquiera"';
+  };
+  script.src = SCRIPT_URL + '?callback=' + callbackName;
+  document.head.appendChild(script);
+}
+
+// ============ BÚSQUEDA ============
+function onInput() {
+  if (!inp) return;
+  const q = inp.value.trim().toUpperCase();
+  if (!q) { hideSugg(); return; }
+  const ti = $('torreInput'); if (ti) ti.value = '';
+  const di = $('deptoInput'); if (di) di.value = '';
+  const dr = $('deptoResult'); if (dr) dr.style.display = 'none';
+  const keys = Object.keys(DB);
+  const matches = keys.filter(k => k.toUpperCase().includes(q));
+  showSugg(matches.slice(0, 15), matches.length);
+}
+function showSugg(matches, total) {
+  const list = $('suggList');
+  if (matches.length === 0) {
+    list.innerHTML = '<div class="sugg-item" style="color:var(--muted);font-style:italic">No se encontró ningún cliente</div>';
+  } else {
+    const items = matches.map(m => `<div class="sugg-item" onclick="pickSugg('${escapeJs(m)}')">${escapeHtml(m)}</div>`).join('');
+    const counter = total > matches.length ? `<div class="sugg-count">Mostrando ${matches.length} de ${total} — escribe más para filtrar</div>` : '';
+    list.innerHTML = items + counter;
+  }
+  list.style.display = 'block';
+}
+function hideSugg() { $('suggList').style.display = 'none'; }
+function pickSugg(name) { inp.value = name; hideSugg(); loadClient(name); }
+
+function loadClient(name) {
+  curClient = name;
+  const entries = DB[name];
+  const dr = $('deptoRow'), ds = $('deptoSel'), db = $('deptoBadge');
+  if (entries.length > 1) {
+    dr.classList.add('show');
+    ds.innerHTML = '<option value="">-- Selecciona un departamento --</option>' +
+      entries.map((e,i) => `<option value="${i}">Torre ${escapeHtml(e.torre)} - Depto ${escapeHtml(e.depto)}</option>`).join('');
+    db.textContent = entries.length + ' deptos';
+    ds.value = ''; curData = null; renderWaiting();
+  } else {
+    dr.classList.remove('show');
+    curData = entries[0]; renderFicha(curData);
+    loadSeguimientoActual();
+  }
+}
+function onDeptoChange() {
+  const v = $('deptoSel').value;
+  if (!v) { curData = null; renderWaiting(); return; }
+  curData = DB[curClient][parseInt(v)]; renderFicha(curData);
+  loadSeguimientoActual();
+}
+function clearAll() {
+  if (inp) inp.value = '';
+  hideSugg(); curClient = null; curData = null;
+  $('deptoRow').classList.remove('show');
+  const ti = $('torreInput'); if (ti) ti.value = '';
+  const di = $('deptoInput'); if (di) di.value = '';
+  const dr = $('deptoResult'); if (dr) dr.style.display = 'none';
+  renderDashboardShell();
+  loadDashboard();
+}
+
+function searchByDepto() {
+  const torre = $('torreInput').value.trim().toUpperCase();
+  const depto = $('deptoInput').value.trim().toUpperCase();
+  const result = $('deptoResult');
+  if (inp) inp.value = '';
+  hideSugg();
+
+  if (!depto) { result.style.display = 'block'; result.textContent = 'Escribe el número de departamento'; return; }
+
+  curClient = null; curData = null;
+  $('deptoRow').classList.remove('show');
+  $('content').innerHTML = '<div class="card"><div class="card-body"><div class="empty-state">Buscando...</div></div></div>';
+
+  const matches = [];
+  Object.entries(DB).forEach(([name, entries]) => {
+    entries.forEach((e, idx) => {
+      const torreMatch = !torre || e.torre.toUpperCase() === torre;
+      const deptoMatch = e.depto.toString().toUpperCase() === depto;
+      if (torreMatch && deptoMatch) matches.push({ name, entry: e, idx });
+    });
+  });
+
+  if (matches.length === 0) {
+    result.style.display = 'block'; result.style.background = '#FBEAE7'; result.style.color = 'var(--red)';
+    result.textContent = 'No se encontró ningún departamento con esos datos';
+    renderDashboardShell(); loadDashboard();
+    return;
+  }
+  if (matches.length === 1) {
+    result.style.display = 'none';
+    const m = matches[0];
+    inp.value = m.name; curClient = m.name;
+    const entries = DB[m.name];
+    if (entries.length > 1) {
+      const dr = $('deptoRow'), ds = $('deptoSel'), db = $('deptoBadge');
+      dr.classList.add('show');
+      ds.innerHTML = '<option value="">-- Selecciona un departamento --</option>' +
+        entries.map((e,i) => `<option value="${i}"${i===m.idx?' selected':''}>Torre ${escapeHtml(e.torre)} - Depto ${escapeHtml(e.depto)}</option>`).join('');
+      db.textContent = entries.length + ' deptos'; ds.value = m.idx;
+      curData = entries[m.idx];
+    } else {
+      $('deptoRow').classList.remove('show');
+      curData = entries[0];
+    }
+    renderFicha(curData);
+    loadSeguimientoActual();
+  } else {
+    result.style.display = 'block'; result.style.background = 'var(--purple-lt)'; result.style.color = 'var(--purple)';
+    result.innerHTML = 'Se encontraron ' + matches.length + ' resultados:<br>' +
+      matches.map(m => `<span style="cursor:pointer;text-decoration:underline;margin-right:12px" onclick="pickSugg('${escapeJs(m.name)}')">${escapeHtml(m.name)} — Torre ${escapeHtml(m.entry.torre)} Depto ${escapeHtml(m.entry.depto)}</span>`).join('<br>');
+  }
+}
+
+// ============ FICHA ============
+function fi(label, val, cls='') {
+  return `<div class="f"><div class="f-lbl">${label}</div><div class="f-val ${cls}">${val || '<span style="color:var(--muted);font-style:italic">--</span>'}</div></div>`;
+}
+function renderWaiting() {
+  $('content').innerHTML = `
+    <div class="card"><div class="card-head" style="background:var(--purple)">Selecciona un departamento</div>
+    <div class="card-body"><p style="color:var(--purple);font-weight:700;padding:8px 0">Elige un departamento del selector de arriba</p></div></div>`;
+}
+function renderFicha(d) {
+  $('content').innerHTML = `
+    <div class="card">
+      <div class="card-head" style="background:var(--blue)">Identificación del cliente</div>
+      <div class="card-body"><div class="grid2">
+        ${fi('Torre',escapeHtml(d.torre))} ${fi('Depto',escapeHtml(d.depto))}
+        ${fi('Nivel',escapeHtml(d.nivel))} ${fi('Estatus',escapeHtml(d.estatus))}
+        ${fi('Teléfono',escapeHtml(d.tel))} ${fi('Antigüedad (tiempo vencido)',escapeHtml(d.ant))}
+        ${fi('Vendedor',escapeHtml(d.vendedor))} ${fi('Fecha venta',escapeHtml(d.fecha))}
+      </div></div>
+    </div>
+    <div class="card">
+      <div class="card-head" style="background:var(--amber)">Datos financieros</div>
+      <div class="card-body"><div class="grid2">
+        ${fi('Precio venta',fmtM(d.precio),'money')} ${fi('Precio m2',fmtM(d.precio_m2),'money')}
+        ${fi('Depósitos',fmtM(d.depositos),'money')} ${fi('Efectivo',fmtM(d.efectivo),'money')}
+        ${fi('Dep + Efectivo',fmtM(d.dep_ef),'money')} ${fi('% Enganche',fmtP(d.enganche))}
+        ${fi('Documentado',fmtM(d.doc),'money')} ${fi('Pago final',fmtM(d.pago_final),'money')}
+        ${fi('Saldo que debe',fmtM(d.saldo),'red')} ${fi('Vencido',fmtM(d.vencido),d.vencido>0?'red':'money')}
+        ${fi('Vencido desde',escapeHtml(d.venc_desde))}
+      </div></div>
+    </div>
+    <div class="card">
+      <div class="card-head" style="background:var(--green)">Descuento máximo autorizado</div>
+      <div class="card-body"><div class="grid2">
+        ${fi('Desc. máx %', fmtPctMax(d.desc_pct), d.desc_pct>0?'green':'dim')}
+        ${fi('Desc. máx $', d.desc_monto>0?fmtM(d.desc_monto):'No aplica', d.desc_monto>0?'green':'dim')}
+      </div></div>
+    </div>
+    ${followCard()}
+    ${simCard()}
+  `;
+  attachSim(d);
+}
+
+// ============ SIMULADOR ============
+function simCard() {
+  return `<div class="card">
+    <div class="card-head" style="background:var(--purple)">Simulador de descuento</div>
+    <div class="card-body">
+      <div class="sim-row">
+        <div class="sim-group"><div class="sim-lbl">Monto a adelantar $</div><input type="number" class="sim-inp" id="s_montoD" placeholder="0.00" min="0" step="0.01"><div class="sim-hint">Monto en pesos</div></div>
+        <div class="sim-arrow">&harr;</div>
+        <div class="sim-group"><div class="sim-lbl">Monto a adelantar %</div><input type="number" class="sim-inp" id="s_montoPct" placeholder="0.00" min="0" max="100" step="0.01"><div class="sim-hint">Ej: 50 = 50% del saldo</div></div>
+      </div>
+      <div class="sim-row">
+        <div class="sim-group"><div class="sim-lbl">Descuento a dar $</div><input type="number" class="sim-inp" id="s_descD" placeholder="0.00" min="0" step="0.01"><div class="sim-hint">Descuento en pesos</div></div>
+        <div class="sim-arrow">&harr;</div>
+        <div class="sim-group"><div class="sim-lbl">Descuento a dar %</div><input type="number" class="sim-inp" id="s_descPct" placeholder="0.00" min="0" step="0.01"><div class="sim-hint">Ej: 1.5 = 1.5% del monto</div></div>
+      </div>
+      <div class="divider"></div>
+      <div class="res-grid">
+        <div class="res-item"><div class="res-lbl">Monto adelantado $</div><div class="res-val navy" id="r_montoD">--</div></div>
+        <div class="res-item"><div class="res-lbl">Monto adelantado % del saldo</div><div class="res-val navy" id="r_montoPct">--</div></div>
+        <div class="res-item wide"><div class="res-lbl">Pago adelantado sin descuento</div><div class="res-val navy" id="r_pago_sin">--</div></div>
+        <div class="res-item"><div class="res-lbl">Descuento %</div><div class="res-val purple" id="r_descPct">--</div></div>
+        <div class="res-item"><div class="res-lbl">Descuento $</div><div class="res-val purple" id="r_descD">--</div></div>
+        <div class="res-item wide"><div class="res-lbl">Pago adelantado con descuento</div><div class="res-val navy" id="r_pago_con">--</div></div>
+        <div class="res-item wide"><div class="res-lbl">Saldo restante (después del descuento)</div><div class="res-val red" id="r_saldo">--</div></div>
+      </div>
+    </div>
+  </div>`;
+}
+function attachSim(d) {
+  const saldo = parseFloat(d.saldo) || 0;
+  let updating = false;
+  function calc(source) {
+    if (updating) return;
+    updating = true;
+    const mD = parseFloat($('s_montoD').value)||0, mPct = parseFloat($('s_montoPct').value)||0;
+    const dD = parseFloat($('s_descD').value)||0, dPct = parseFloat($('s_descPct').value)||0;
+    let monto = 0;
+    if (source==='s_montoD' && mD>0) { monto=mD; $('s_montoPct').value = saldo>0 ? (mD/saldo*100).toFixed(2) : ''; }
+    else if (source==='s_montoPct' && mPct>0) { monto=mPct/100*saldo; $('s_montoD').value = monto.toFixed(2); }
+    else if (mD>0) monto=mD; else if (mPct>0) monto=mPct/100*saldo;
+    let desc = 0;
+    if (source==='s_descD' && dD>0) { desc=dD; $('s_descPct').value = monto>0 ? (dD/monto*100).toFixed(2) : ''; }
+    else if (source==='s_descPct' && dPct>0) { desc=dPct/100*monto; $('s_descD').value = desc.toFixed(2); }
+    else if (dD>0) desc=dD; else if (dPct>0) desc=dPct/100*monto;
+    updating = false;
+    if (monto===0) { ['r_montoD','r_montoPct','r_pago_sin','r_descPct','r_descD','r_pago_con','r_saldo'].forEach(id=>{const e=$(id); if(e) e.textContent='--';}); return; }
+    const resto = Math.max(saldo-monto, 0), pctM = saldo>0 ? monto/saldo*100 : 0, pctD = monto>0 ? desc/monto*100 : 0;
+    $('r_montoD').textContent = fmtM(monto); $('r_montoPct').textContent = pctM.toFixed(2)+'%';
+    $('r_pago_sin').textContent = fmtM(monto); $('r_descPct').textContent = pctD.toFixed(2)+'%';
+    $('r_descD').textContent = fmtM(desc); $('r_pago_con').textContent = fmtM(monto-desc); $('r_saldo').textContent = fmtM(resto);
+  }
+  ['s_montoD','s_montoPct','s_descD','s_descPct'].forEach(id => { const el=$(id); if(el) el.addEventListener('input', ()=>calc(id)); });
+}
+
+// ============ SEGUIMIENTO COMERCIAL ============
+function followCard() {
+  return `<div class="card follow-card">
+    <div class="card-head" style="background:var(--navy)">Seguimiento comercial</div>
+    <div class="card-body">
+      <div class="summary-strip" id="summaryStrip">
+        <div class="summary-box"><div class="f-lbl">Estado</div><div class="summary-main" id="summaryWhats">--</div></div>
+        <div class="summary-box"><div class="f-lbl">Próximo contacto</div><div class="summary-main" id="summaryProximo">--</div></div>
+        <div class="summary-box"><div class="f-lbl">Responsable</div><div class="summary-main" id="summaryResp">--</div></div>
+        <div class="summary-box"><div class="f-lbl">Última actualización</div><div class="summary-main" id="summaryAct">--</div></div>
+      </div>
+      <div class="grid2">
+        <div class="f"><div class="f-lbl">Estado</div><select id="segEstado" onchange="onCatalogSelect('segEstado')"></select></div>
+        <div class="f"><div class="f-lbl">Responsable</div><select id="segResponsable" onchange="onCatalogSelect('segResponsable')"></select></div>
+        <div class="f"><div class="f-lbl">Último contacto</div><input type="date" id="segUltimoContacto"></div>
+        <div class="f"><div class="f-lbl">Próximo contacto</div><input type="date" id="segProximoContacto"></div>
+        <div class="f"><div class="f-lbl">Hora próximo contacto</div><input type="text" id="segHoraProximoContacto" placeholder="10:00 am"></div>
+        <div class="f"><div class="f-lbl">Forma de pago</div><input type="text" id="segFormaPago" placeholder="Crédito, recursos propios..."></div>
+        <div class="f"><div class="f-lbl">Prioridad</div><select id="segPrioridad"><option>Media</option><option>Alta</option><option>Baja</option></select></div>
+      </div>
+      <div class="f" style="margin-top:8px"><div class="f-lbl">Nota</div><textarea id="segNota" placeholder="¿Qué pasó en este contacto?"></textarea></div>
+      <div class="follow-actions">
+        <button class="btn btn-save-follow" onclick="saveSeguimiento()">Guardar seguimiento</button>
+      </div>
+      <div class="follow-status" id="segStatus"></div>
+      <div class="hist-list timeline" id="segHistorial"></div>
+    </div>
+  </div>`;
+}
+
+function onCatalogSelect(id) {
+  const el = $(id);
+  if (el.value === '__nuevo__') {
+    const nuevo = prompt('Escribe el nuevo valor:');
+    el.value = '';
+    if (!nuevo || !nuevo.trim()) return;
+    const action = id === 'segEstado' ? 'addEstado' : 'addResponsable';
+    const paramName = id === 'segEstado' ? 'estado' : 'responsable';
+    jsonpAction({ action, [paramName]: nuevo.trim() }, function() {
+      loadEstadosSeguimiento(nuevo.trim(), id);
+    }, function(err) { showToast('No se pudo agregar: ' + err.message, true); });
+  }
+}
+
+function fillCatalogSelect(id, values, selected) {
+  const el = $(id);
+  if (!el) return;
+  const opts = (values || []).map(v => `<option value="${escapeHtml(v)}"${v===selected?' selected':''}>${escapeHtml(v)}</option>`).join('');
+  el.innerHTML = `<option value="">-- Selecciona --</option>${opts}<option value="__nuevo__">+ Agregar nuevo…</option>`;
+  if (selected && values.includes(selected)) el.value = selected;
+}
+
+function loadEstadosSeguimiento(selectAfter, selectId) {
+  jsonpAction({ action: 'getConfig' }, function(resp) {
+    ESTADOS_SEGUIMIENTO = resp.estados || [];
+    RESPONSABLES_SEGUIMIENTO = resp.responsables || [];
+    fillCatalogSelect('segEstado', ESTADOS_SEGUIMIENTO, selectId === 'segEstado' ? selectAfter : $('segEstado') ? $('segEstado').value : '');
+    fillCatalogSelect('segResponsable', RESPONSABLES_SEGUIMIENTO, selectId === 'segResponsable' ? selectAfter : $('segResponsable') ? $('segResponsable').value : '');
+  }, function(err) { console.warn('No se pudo cargar catálogo:', err.message); });
+}
+
+function setSegStatus(msg, isError) {
+  const el = $('segStatus'); if (!el) return;
+  el.textContent = msg; el.style.color = isError ? 'var(--red)' : 'var(--muted)';
+}
+function updateSummaryStrip(s) {
+  const setTxt = (id, v) => { const el = $(id); if (el) el.textContent = v || '--'; };
+  setTxt('summaryWhats', (s && s.estado) || 'Sin actividad registrada');
+  setTxt('summaryProximo', s && s.proximoContacto ? s.proximoContacto : '--');
+  setTxt('summaryResp', s && s.responsable ? s.responsable : '--');
+  setTxt('summaryAct', s && s.actualizado ? s.actualizado : '--');
+}
+
+function loadSeguimientoActual() {
+  if (!curData || !curClient) return;
+  const kd = clientKeyData();
+  setSegStatus('Cargando seguimiento...', false);
+  loadEstadosSeguimiento();
+  jsonpAction({ action: 'getFollowup', ...kd }, function(resp) {
+    const s = (resp && resp.current) || null;
+    const setVal = (id, val) => { const el = $(id); if (el) el.value = val || ''; };
+    if (s) {
+      fillCatalogSelect('segEstado', ESTADOS_SEGUIMIENTO, s.estado);
+      fillCatalogSelect('segResponsable', RESPONSABLES_SEGUIMIENTO, s.responsable);
+      setVal('segUltimoContacto', isoFromDisplay(s.ultimoContacto) || todayISO());
+      setVal('segProximoContacto', isoFromDisplay(s.proximoContacto));
+      setVal('segHoraProximoContacto', '');
+      setVal('segFormaPago', s.formaPago || '');
+      setVal('segPrioridad', s.prioridad || 'Media');
+      updateSummaryStrip(s);
+    } else {
+      setVal('segUltimoContacto', todayISO());
+      updateSummaryStrip(null);
+    }
+    setVal('segNota', '');
+    SEG_HISTORY = (resp && resp.history) || [];
+    renderHistorialCompleto();
+    setSegStatus('Seguimiento cargado.', false);
+  }, function(err) { setSegStatus('No se pudo cargar seguimiento: ' + err.message, true); });
+}
+
+// Convierte dd/MM/yyyy (como lo manda Apps Script) a yyyy-MM-dd (lo que espera <input type=date>)
+function isoFromDisplay(v) {
+  if (!v) return '';
+  const m = String(v).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (!m) return '';
+  return m[3] + '-' + m[2].padStart(2,'0') + '-' + m[1].padStart(2,'0');
+}
+
+function saveSeguimiento() {
+  if (!curData || !curClient) return;
+  const kd = clientKeyData();
+  const getVal = id => { const el = $(id); return el ? el.value.trim() : ''; };
+
+  setSegStatus('Guardando seguimiento...', false);
+  jsonpAction({
+    action: 'saveFollowup', ...kd,
+    estado: getVal('segEstado'),
+    responsable: getVal('segResponsable'),
+    ultimoContacto: getVal('segUltimoContacto'),
+    proximoContacto: getVal('segProximoContacto'),
+    horaProximoContacto: getVal('segHoraProximoContacto'),
+    formaPago: getVal('segFormaPago'),
+    prioridad: getVal('segPrioridad'),
+    nota: getVal('segNota')
+  }, function(resp) {
+    $('segNota').value = '';
+    setSegStatus('Seguimiento guardado correctamente.', false);
+    showToast('Seguimiento guardado');
+    loadSeguimientoActual();
+    refreshDashboardIfVisible();
+  }, function(err) { setSegStatus('No se pudo guardar: ' + err.message, true); showToast('Error al guardar seguimiento', true); });
+}
+
+function renderHistorialCompleto() {
+  const cont = $('segHistorial');
+  if (!cont) return;
+  const hist = Array.isArray(SEG_HISTORY) ? SEG_HISTORY : [];
+  if (!hist.length) { cont.innerHTML = '<div class="hist-item">Sin historial registrado.</div>'; return; }
+  cont.innerHTML = hist.map(h => `
+    <div class="hist-item" data-row="${escapeHtml(h.rowNumber || '')}">
+      <div class="timeline-top">
+        <div class="timeline-title">${escapeHtml(h.estado || 'Actividad')}</div>
+        <div class="timeline-date">${escapeHtml(h.fecha || '')}</div>
+      </div>
+      <div class="timeline-resp">${escapeHtml(h.responsable || 'Sin responsable')}</div>
+      <div class="timeline-note">${escapeHtml(h.nota || '').replace(/\n/g,'<br>')}</div>
+      <div class="hist-actions">
+        <button type="button" class="hist-mini-btn edit" onclick="editarHistorial('${escapeJs(h.rowNumber || '')}')">Corregir</button>
+        <button type="button" class="hist-mini-btn delete" onclick="eliminarHistorial('${escapeJs(h.rowNumber || '')}')">Eliminar</button>
+      </div>
+    </div>`).join('');
+}
+
+function editarHistorial(rowNumber) {
+  const item = (SEG_HISTORY || []).find(h => String(h.rowNumber || '') === String(rowNumber || ''));
+  if (!item) return showToast('No se encontró el registro', true);
+  const nuevoEstado = prompt('Corregir estado:', item.estado || '');
+  if (nuevoEstado === null) return;
+  const nuevoResponsable = prompt('Corregir responsable:', item.responsable || '');
+  if (nuevoResponsable === null) return;
+  const nuevaNota = prompt('Corregir nota:', item.nota || '');
+  if (nuevaNota === null) return;
+
+  setSegStatus('Corrigiendo registro...', false);
+  jsonpAction({ action: 'updateHistory', rowNumber, estado: nuevoEstado, responsable: nuevoResponsable, nota: nuevaNota }, function() {
+    setSegStatus('Registro corregido correctamente.', false);
+    loadSeguimientoActual();
+    refreshDashboardIfVisible();
+    showToast('Registro corregido');
+  }, function(err) { setSegStatus('No se pudo corregir: ' + err.message, true); showToast('Error al corregir', true); });
+}
+function eliminarHistorial(rowNumber) {
+  if (!confirm('¿Eliminar este registro del historial? Esta acción no se puede deshacer.')) return;
+  setSegStatus('Eliminando registro...', false);
+  jsonpAction({ action: 'deleteHistory', rowNumber }, function() {
+    setSegStatus('Registro eliminado correctamente.', false);
+    loadSeguimientoActual();
+    refreshDashboardIfVisible();
+    showToast('Registro eliminado');
+  }, function(err) { setSegStatus('No se pudo eliminar: ' + err.message, true); showToast('Error al eliminar', true); });
+}
+
+// ============ DASHBOARD ============
+function renderDashboardShell() {
+  $('content').innerHTML = `
+    <div class="card dashboard-card">
+      <div class="card-body">
+        <div class="dash-head">
+          <div>
+            <div class="dash-title">Panel de seguimiento</div>
+            <div class="dash-sub">Vista rápida de clientes según próximo contacto y estado del expediente.</div>
+          </div>
+          <div class="dash-date">Hoy: ${new Date().toLocaleDateString('es-MX')}</div>
+        </div>
+        <div class="dash-grid" id="dashTiles">
+          ${dashTile('vencidos','🔴','Vencidos','--','Requieren atención','dash-red')}
+          ${dashTile('hoy','🟠','Para hoy','--','Contactar hoy','dash-orange')}
+          ${dashTile('proximos7','🟡','Próximos 7 días','--','Próximos a vencer','dash-yellow')}
+          ${dashTile('pendientes','🔵','Pendientes','--','Sin otra categoría','dash-blue')}
+          ${dashTile('propuestaEnviada','📄','Propuesta enviada','--','Seguimiento activo','dash-teal')}
+          ${dashTile('convenioFirmado','✅','Proceso concluido','--','Cerrados con éxito','dash-green')}
+          ${dashTile('noInteresado','❌','No interesado','--','Cerrados','dash-gray')}
+        </div>
+        <div class="dash-table-card">
+          <div class="dash-table-head">
+            <div class="dash-table-title" id="dashTableTitle">Selecciona una categoría</div>
+            <div>
+              <button class="btn-mini-open" onclick="loadDashboard(DASHBOARD_FILTER)">Actualizar lista</button>
+              <button class="btn-mini-clear" onclick="clearDashboardList()">Limpiar lista</button>
+            </div>
+          </div>
+          <div id="dashTableWrap"><div class="empty-state">Selecciona un icono del panel para ver su lista.</div></div>
+        </div>
+      </div>
+    </div>`;
+}
+function dashTile(filter, icon, label, num, caption, cls) {
+  return `<div class="dash-tile ${cls}" data-filter="${filter}" onclick="loadDashboard('${filter}')">
+    <div class="dash-icon">${icon}</div><div class="dash-label">${label}</div>
+    <div class="dash-num" id="dashCount_${filter}">${num}</div>
+    <div class="dash-caption">${caption}<br><strong>Ver lista →</strong></div>
+  </div>`;
+}
+function loadDashboard(filter='') {
+  DASHBOARD_FILTER = filter || '';
+  if (!$('content')) return;
+  if (!$('dashTiles')) renderDashboardShell();
+
+  jsonpAction({ action: 'getDashboard' }, function(resp) {
+    if (!resp || !resp.ok) return;
+    const c = resp.counts || {}, buckets = resp.buckets || {};
+    const setC = (k,v) => { const el = $('dashCount_'+k); if (el) el.textContent = v || 0; };
+    ['vencidos','hoy','proximos7','pendientes','propuestaEnviada','convenioFirmado','noInteresado'].forEach(k => setC(k, c[k]));
+
+    document.querySelectorAll('.dash-tile').forEach(t => t.classList.toggle('active', DASHBOARD_FILTER && t.dataset.filter === DASHBOARD_FILTER));
+
+    if (!DASHBOARD_FILTER) { DASHBOARD_ITEMS = []; renderDashboardTable('', []); return; }
+    DASHBOARD_ITEMS = buckets[DASHBOARD_FILTER] || [];
+    renderDashboardTable(DASHBOARD_FILTER, DASHBOARD_ITEMS);
+  }, function(err) {
+    const w = $('dashTableWrap');
+    if (w) w.innerHTML = '<div class="empty-state">No se pudo cargar el panel: ' + escapeHtml(err.message) + '</div>';
+  });
+}
+function clearDashboardList() {
+  DASHBOARD_FILTER = ''; DASHBOARD_ITEMS = [];
+  document.querySelectorAll('.dash-tile').forEach(t => t.classList.remove('active'));
+  renderDashboardTable('', []);
+  loadDashboard('');
+}
+function refreshDashboardIfVisible() { if ($('dashTiles')) loadDashboard(DASHBOARD_FILTER || ''); }
+setInterval(refreshDashboardIfVisible, 60000);
+
+function dashboardTitle(filter) {
+  const map = { vencidos:'Vencidos', hoy:'Para hoy', proximos7:'Próximos 7 días', pendientes:'Pendientes',
+    propuestaEnviada:'Propuesta enviada', convenioFirmado:'Proceso concluido', noInteresado:'No interesado' };
+  return map[filter] || 'Selecciona una categoría';
+}
+function renderDashboardTable(filter, items) {
+  const title = $('dashTableTitle');
+  if (title) title.textContent = filter ? (dashboardTitle(filter) + ' (' + (items||[]).length + ')') : 'Selecciona una categoría';
+  const w = $('dashTableWrap');
+  if (!w) return;
+  if (!filter) { w.innerHTML = '<div class="empty-state">Selecciona un icono del panel para ver su lista.</div>'; return; }
+  if (!items || !items.length) { w.innerHTML = '<div class="empty-state">No hay clientes en esta categoría.</div>'; return; }
+
+  w.innerHTML = `<table class="dash-table"><thead><tr><th>Cliente</th><th>Torre</th><th>Depto</th><th>Próximo contacto</th><th>Estado</th><th>Responsable</th><th>Acciones</th></tr></thead><tbody>` +
+    items.map((it,idx) => {
+      const sem = it.semaforo || {};
+      return `<tr>
+        <td><strong>${escapeHtml(it.cliente||'')}</strong></td>
+        <td>${escapeHtml(it.torre||'')}</td>
+        <td>${escapeHtml(it.depto||'')}</td>
+        <td><span class="status-pill ${escapeHtml(sem.color||'')}">${escapeHtml(sem.label||it.proximoContacto||'--')}</span></td>
+        <td>${escapeHtml(it.estado||'--')}</td>
+        <td>${escapeHtml(it.responsable||'--')}</td>
+        <td><button class="btn-mini-open" onclick="openDashboardClient(${idx})">Ver expediente</button></td>
+      </tr>`;
+    }).join('') + `</tbody></table>`;
+}
+
+function findClientKeyForDashboardItem(it) {
+  const targetName = normalizeKey(it && it.cliente), targetTorre = normalizeKey(it && it.torre), targetDepto = normalizeKey(it && it.depto);
+  const keys = Object.keys(DB || {});
+  for (const key of keys) {
+    if (normalizeKey(key) !== targetName) continue;
+    const idx = (DB[key]||[]).findIndex(e => normalizeKey(e.torre)===targetTorre && normalizeKey(e.depto)===targetDepto);
+    if (idx >= 0) return { key, idx };
+  }
+  for (const key of keys) {
+    const idx = (DB[key]||[]).findIndex(e => normalizeKey(e.torre)===targetTorre && normalizeKey(e.depto)===targetDepto);
+    if (idx >= 0) return { key, idx };
+  }
+  for (const key of keys) { if (normalizeKey(key)===targetName) return { key, idx: 0 }; }
+  return null;
+}
+function openDashboardClient(idx) {
+  const it = DASHBOARD_ITEMS[idx];
+  if (!it) return;
+  const found = findClientKeyForDashboardItem(it);
+  if (!found) { showToast('No encontré ese cliente/departamento en la base principal', true); return; }
+  const name = found.key;
+  if (inp) inp.value = name;
+  curClient = name;
+  const entries = DB[name] || [];
+  const dr = $('deptoRow'), ds = $('deptoSel'), db = $('deptoBadge');
+  if (entries.length > 1) {
+    if (dr) dr.classList.add('show');
+    if (ds) { ds.innerHTML = '<option value="">-- Selecciona un departamento --</option>' + entries.map((e,i)=>`<option value="${i}">Torre ${escapeHtml(e.torre)} - Depto ${escapeHtml(e.depto)}</option>`).join(''); ds.value = String(found.idx); }
+    if (db) db.textContent = entries.length + ' deptos';
+    curData = entries[found.idx];
+  } else if (entries.length === 1) {
+    if (dr) dr.classList.remove('show');
+    curData = entries[0];
+  } else { showToast('No encontré departamentos para ese cliente', true); return; }
+  renderFicha(curData);
+  loadSeguimientoActual();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ============ USUARIOS / LOGIN / ADMINISTRACIÓN (Fase 5) ============
+const LECLUB_SESSION_KEY = 'leclubCrmSessionV1';
+let leclubSession = null, adminUsersCache = [], adminEditingUserId = '';
+function leclubToken() { return leclubSession && leclubSession.token ? leclubSession.token : ''; }
+function sessionJsonp(action, extra, onOk, onErr) {
+  jsonpAction(Object.assign({ action: action, token: leclubToken() }, extra || {}), onOk, onErr);
+}
+function setAuthError(t) { const e = $('authError'); if (e) e.textContent = t || ''; }
+function loginLeClubUsuario() {
+  const usuario = $('authUsuario').value.trim(), password = $('authPassword').value;
+  setAuthError('');
+  if (!usuario || !password) { setAuthError('Escribe usuario y contraseña.'); return; }
+  jsonpAction({ action: 'loginUsuario', usuario: usuario, password: password }, res => {
+    leclubSession = { token: res.token, user: res.user };
+    localStorage.setItem(LECLUB_SESSION_KEY, JSON.stringify(leclubSession));
+    applyLeClubSession();
+  }, err => setAuthError(err.message || 'No fue posible iniciar sesión.'));
+}
+function restoreLeClubSession() {
+  try { leclubSession = JSON.parse(localStorage.getItem(LECLUB_SESSION_KEY) || 'null'); } catch (e) { leclubSession = null; }
+  if (!leclubSession || !leclubSession.token) { showLeClubLogin(); return; }
+  sessionJsonp('getSesionUsuario', {}, res => {
+    leclubSession = { token: leclubSession.token, user: res.user };
+    localStorage.setItem(LECLUB_SESSION_KEY, JSON.stringify(leclubSession));
+    applyLeClubSession();
+  }, () => {
+    localStorage.removeItem(LECLUB_SESSION_KEY);
+    leclubSession = null;
+    showLeClubLogin();
+  });
+}
+function showLeClubLogin() { const o = $('authOverlay'); if (o) o.style.display = 'flex'; }
+function applyLeClubSession() {
+  const o = $('authOverlay'); if (o) o.style.display = 'none';
+  renderSessionPill();
+  applyUserPermissions();
+  startLeClubApp();
+}
+function renderSessionPill() {
+  let pill = $('sessionPill');
+  if (!pill) {
+    pill = document.createElement('div');
+    pill.id = 'sessionPill';
+    pill.className = 'session-pill';
+    document.querySelector('.topbar').appendChild(pill);
+  }
+  const u = leclubSession.user, role = u.superAdmin ? 'Administrador Supremo' : 'Usuario';
+  pill.innerHTML = `<span>${u.superAdmin ? '👑' : '👤'}</span><div class="session-person"><strong>${escapeHtml(u.nombre)}</strong><small>${role}</small></div><button class="session-logout" onclick="logoutLeClubUsuario()">Salir</button>`;
+}
+function logoutLeClubUsuario() {
+  const done = () => { localStorage.removeItem(LECLUB_SESSION_KEY); leclubSession = null; location.reload(); };
+  if (leclubToken()) sessionJsonp('logoutUsuario', {}, done, done); else done();
+}
+function applyUserPermissions() {
+  const p = (leclubSession.user && leclubSession.user.permisos) || {};
+  const drive = $('btnActualizarDrive'); if (drive) drive.style.display = p.actualizarDrive ? '' : 'none';
+  const excel = $('btnConsultarExcel'); if (excel) excel.style.display = p.consultarExcel ? '' : 'none';
+  const admin = $('adminUsersButton'); if (admin) admin.style.display = p.usuarios ? '' : 'none';
+}
+function openAdminUsuarios() { $('adminOverlay').classList.add('show'); newAdminUsuario(); loadAdminUsers(); }
+function closeAdminUsuarios() { $('adminOverlay').classList.remove('show'); }
+function adminStatus(t, ok) { const e = $('adminStatus'); e.textContent = t || ''; e.className = 'admin-status ' + (ok === false ? 'error' : 'ok'); }
+function newAdminUsuario() {
+  adminEditingUserId = '';
+  const hidden = $('admIdInterno'); if (hidden) hidden.value = '';
+  ['admNombre','admUsuario','admPassword'].forEach(id => { const e = $(id); if (e) e.value = ''; });
+  ['permActualizarDrive','permConsultarExcel','permUsuarios'].forEach(id => { const e = $(id); if (e) { e.checked = false; e.disabled = false; } });
+  const n = $('admNombre'); if (n) n.dataset.sync = '1';
+  adminStatus('Creando un usuario nuevo.');
+}
+function syncLoginNombre() {
+  const n = $('admNombre'), u = $('admUsuario');
+  if (n.dataset.sync === '1' || !u.value.trim()) u.value = n.value;
+}
+function loadAdminUsers() {
+  sessionJsonp('listarUsuarios', {}, res => { adminUsersCache = res.users || []; renderAdminUsers(); }, err => adminStatus(err.message, false));
+}
+function renderAdminUsers() {
+  const tb = $('usersTbody');
+  $('usersCount').textContent = adminUsersCache.length + ' usuario(s) registrado(s)';
+  tb.innerHTML = adminUsersCache.map(u => `<tr><td><strong>${escapeHtml(u.usuario)}</strong></td><td>${escapeHtml(u.nombre)}</td><td><span class="role-badge ${u.superAdmin ? 'admin' : 'user'}">${u.superAdmin ? '👑 Administrador Supremo' : 'Usuario'}</span></td><td>${permBadge('Drive', u.permisos.actualizarDrive)}${permBadge('Excel', u.permisos.consultarExcel)}${permBadge('Usuarios', u.permisos.usuarios)}</td><td>${escapeHtml(u.ultimoAcceso || '—')}</td><td><button class="admin-mini" onclick="editAdminUsuario('${u.idInterno}')">Editar</button>${u.superAdmin ? '' : ` <button class="admin-mini delete" onclick="deleteAdminUsuario('${u.idInterno}')">Eliminar</button>`}</td></tr>`).join('');
+}
+function permBadge(n, v) { return `<span class="perm-badge ${v ? 'yes' : 'no'}">${n}: ${v ? 'Sí' : 'No'}</span>`; }
+function editAdminUsuario(id) {
+  const u = adminUsersCache.find(x => x.idInterno === id); if (!u) return;
+  adminEditingUserId = u.idInterno;
+  $('admIdInterno').value = u.idInterno;
+  $('admNombre').value = u.nombre;
+  $('admNombre').dataset.sync = '0';
+  $('admUsuario').value = u.usuario;
+  $('admPassword').value = '';
+  $('permActualizarDrive').checked = !!u.permisos.actualizarDrive;
+  $('permConsultarExcel').checked = !!u.permisos.consultarExcel;
+  $('permUsuarios').checked = !!u.permisos.usuarios;
+  ['permActualizarDrive','permConsultarExcel','permUsuarios'].forEach(x => $(x).disabled = !!u.superAdmin);
+  adminStatus(u.superAdmin ? 'El Administrador Supremo conserva siempre todos los permisos.' : '');
+}
+function saveAdminUsuario() {
+  const btn = document.querySelector('.admin-save');
+  if (btn && btn.disabled) return;
+  const hiddenId = String(($('admIdInterno') || {}).value || '').trim();
+  const currentId = String(adminEditingUserId || '').trim();
+  const editId = (hiddenId && currentId && hiddenId === currentId) ? currentId : '';
+  const modo = editId ? 'editar' : 'crear';
+  const d = {
+    modo: modo, idInterno: editId,
+    nombre: $('admNombre').value.trim(), usuario: $('admUsuario').value.trim(), password: $('admPassword').value,
+    permisoActualizarDrive: $('permActualizarDrive').checked,
+    permisoConsultarExcel: $('permConsultarExcel').checked,
+    permisoUsuarios: $('permUsuarios').checked
+  };
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+  adminStatus(modo === 'crear' ? 'Creando usuario nuevo...' : 'Actualizando usuario...');
+  sessionJsonp('guardarUsuario', d, res => {
+    if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
+    adminStatus(res.message || 'Usuario guardado.', true);
+    newAdminUsuario();
+    loadAdminUsers();
+  }, err => {
+    adminStatus(err && err.message ? err.message : 'No se pudo guardar el usuario.', false);
+    if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
+  });
+}
+function deleteAdminUsuario(id) {
+  if (!confirm('¿Eliminar este usuario?')) return;
+  sessionJsonp('eliminarUsuario', { idInterno: id }, res => { adminStatus(res.message || 'Usuario eliminado.', true); loadAdminUsers(); }, err => adminStatus(err.message, false));
+}
+
+// ============ ARRANQUE ============
+function startLeClubApp() {
+  renderDashboardShell();
+  loadDashboard();
+  loadFromScript();
+}
+document.addEventListener('DOMContentLoaded', () => {
+  inp = $('searchInput');
+  if (inp) {
+    inp.addEventListener('input', onInput);
+    inp.addEventListener('paste', () => setTimeout(onInput, 30));
+    inp.addEventListener('keydown', e => { if (e.key === 'Escape') hideSugg(); });
+  }
+  const di = $('deptoInput');
+  if (di) di.addEventListener('keydown', e => { if (e.key === 'Enter') searchByDepto(); });
+  document.addEventListener('click', e => { if (!e.target.closest('.suggestions')) hideSugg(); });
+
+  const authPass = $('authPassword');
+  if (authPass) authPass.addEventListener('keydown', e => { if (e.key === 'Enter') loginLeClubUsuario(); });
+
+  restoreLeClubSession();
+});
+</script>
+</body>
+</html>
